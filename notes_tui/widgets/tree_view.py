@@ -51,3 +51,10 @@ class NotesTreeView(Tree):
             
             if child['is_dir'] and child['children']:
                 self._load_tree_node(node, child)
+    
+    def refresh_tree(self) -> None:
+        """Refresh the tree view to show updated files"""
+        # Clear existing tree
+        self.root.remove_children()
+        # Reload the tree
+        self.load_tree()

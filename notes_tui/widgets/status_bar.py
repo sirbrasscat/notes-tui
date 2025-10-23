@@ -18,15 +18,11 @@ class StatusBar(Static):
         super().__init__("Ready", **kwargs)
         self.message = "Ready"
     
-    def update(self, message: str) -> None:
+    def update_message(self, message: str) -> None:
         """Update the status message
         
         Args:
             message: New status message
         """
         self.message = message
-        self.update_content()
-    
-    def update_content(self) -> None:
-        """Update the rendered content"""
         self.update(Text(self.message, style="white on blue"))

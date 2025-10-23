@@ -45,8 +45,8 @@ python -m notes_tui --dev
 |---------|--------|--------|
 | Navigate files | ✅ | Arrow keys |
 | View notes | ✅ | Enter |
+| Create from template | ✅ | `n` |
 | Search notes | 🔄 | `/` |
-| Create note | ⏳ | `n` |
 | Delete note | ⏳ | `d` |
 | Edit note | ⏳ | `e` |
 | Quit app | ✅ | `q` / `Ctrl+C` |
