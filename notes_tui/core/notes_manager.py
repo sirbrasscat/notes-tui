@@ -17,13 +17,13 @@ class NotesManager:
             root_dir: Root directory containing all notes
         """
         self.root_dir = Path(root_dir)
-        self.categories = {
-            'work': self.root_dir / 'work',
-            'personal': self.root_dir / 'personal',
-            'journals': self.root_dir / 'journals',
-            'learning': self.root_dir / 'learning',
-            'budgets': self.root_dir / 'budgets',
-        }
+        
+        # Auto-discover categories from existing directories
+        self.categories = {}
+        if self.root_dir.exists():
+            for item in self.root_dir.iterdir():
+                if item.is_dir() and not item.name.startswith('.'):
+                    self.categories[item.name] = item
     
     def get_all_notes(self) -> List[Path]:
         """Get all markdown notes in the notes directory

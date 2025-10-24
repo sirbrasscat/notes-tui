@@ -19,6 +19,7 @@ from notes_tui.widgets.input_dialog import InputDialog
 from notes_tui.core.notes_manager import NotesManager
 from notes_tui.core.config import Config
 from notes_tui.core.template_manager import TemplateManager
+from notes_tui.core.editor_manager import EditorManager
 
 
 class NotesApp(App):
@@ -50,29 +51,59 @@ class NotesApp(App):
     }
     """
 
-    BINDINGS = [
-        Binding("q", "quit", "Quit", show=True),
-        Binding("ctrl+c", "quit", "Quit"),
-        Binding("n", "new_note", "New", show=True),
-        Binding("d", "delete_note", "Delete", show=True),
-        Binding("e", "edit_note", "Edit", show=True),
-        Binding("/", "search", "Search", show=True),
-        Binding("?", "help", "Help", show=True),
-    ]
+    # Note: BINDINGS will be set dynamically from config in __init__
+    BINDINGS = []
 
-    def __init__(self, notes_dir: Optional[Path] = None):
+    def __init__(self, config_path: Optional[Path] = None):
         """Initialize the Notes TUI application
         
         Args:
-            notes_dir: Root directory for notes (defaults to current directory)
+            config_path: Optional path to custom config file
         """
         super().__init__()
-        self.notes_dir = notes_dir or Path.cwd()
-        self.config = Config(self.notes_dir)
+        
+        # Load configuration
+        self.config = Config(config_path)
+        
+        # Set up keybindings from config
+        self._setup_keybindings()
+        
+        # Initialize managers using config
+        self.notes_dir = self.config.notes_directory
         self.notes_manager = NotesManager(self.notes_dir)
-        self.template_manager = TemplateManager()
+        self.template_manager = TemplateManager(self.config)
+        self.editor_manager = EditorManager(self.config)
+        
+        # Set app title and subtitle
         self.title = "Notes TUI - Personal Markdown Notebook"
         self.sub_title = f"Root: {self.notes_dir}"
+        
+        # Current selected note
+        self.current_note: Optional[Path] = None
+    
+    def _setup_keybindings(self) -> None:
+        """Setup keybindings from config"""
+        # Always include quit bindings
+        self.BINDINGS = [
+            Binding(self.config.get_keybinding('quit') or "q", "quit", "Quit", show=True),
+            Binding("ctrl+c", "quit", "Quit"),
+        ]
+        
+        # Add other bindings from config
+        bindings_map = [
+            ('new_note', 'new_note', 'New'),
+            ('edit_note', 'edit_note', 'Edit'),
+            ('delete_note', 'delete_note', 'Delete'),
+            ('search', 'search', 'Search'),
+            ('toggle_preview', 'toggle_preview', 'Preview'),
+            ('refresh', 'refresh', 'Refresh'),
+            ('help', 'help', 'Help'),
+        ]
+        
+        for config_key, action, description in bindings_map:
+            key = self.config.get_keybinding(config_key)
+            if key:
+                self.BINDINGS.append(Binding(key, action, description, show=True))
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app"""
@@ -151,8 +182,13 @@ class NotesApp(App):
         if not note_name.endswith(".md"):
             note_name = f"{note_name}.md"
         
-        # Create note path in the notes directory
-        note_path = self.notes_dir / note_name
+        # Get default category from config
+        default_category = self.config.get('quick_capture.default_category', 'personal')
+        
+        # Create note path in the appropriate category
+        category_dir = self.notes_dir / default_category
+        category_dir.mkdir(parents=True, exist_ok=True)
+        note_path = category_dir / note_name
         
         # Check if file already exists
         if note_path.exists():
@@ -167,9 +203,26 @@ class NotesApp(App):
         
         if success:
             self.update_status(f"Created note: {note_name}")
+            
             # Refresh the tree view
             tree_view = self.query_one("#tree-pane", NotesTreeView)
             tree_view.refresh_tree()
+            
+            # Set as current note
+            self.current_note = note_path
+            
+            # If instant_edit is enabled, open in editor immediately
+            if self.config.get('quick_capture.instant_edit', True):
+                try:
+                    with self.suspend():
+                        self.editor_manager.launch(note_path)
+                    
+                    # Refresh preview after editing
+                    note_preview = self.query_one("#note-pane", NotePreview)
+                    note_preview.load_note(note_path)
+                    self.update_status(f"Note saved: {note_name}")
+                except Exception as e:
+                    self.update_status(f"Error opening editor: {e}")
         else:
             self.update_status(f"Failed to create note from template '{template_name}'")
 
@@ -179,15 +232,59 @@ class NotesApp(App):
 
     def action_edit_note(self) -> None:
         """Action: Edit the current note in external editor"""
-        self.update_status("Edit feature not yet implemented")
+        if self.current_note is None:
+            self.update_status("No note selected")
+            return
+        
+        if not self.current_note.exists():
+            self.update_status(f"Note does not exist: {self.current_note}")
+            return
+        
+        try:
+            # Suspend the TUI to launch editor
+            with self.suspend():
+                self.update_status(f"Opening {self.current_note.name} in editor...")
+                success = self.editor_manager.launch(self.current_note)
+                
+            if success:
+                self.update_status(f"Edited: {self.current_note.name}")
+                # Refresh the preview
+                note_preview = self.query_one("#note-pane", NotePreview)
+                note_preview.load_note(self.current_note)
+            else:
+                self.update_status("Editor exited with error")
+                
+        except Exception as e:
+            self.update_status(f"Error launching editor: {e}")
 
     def action_search(self) -> None:
         """Action: Open search interface"""
         self.update_status("Search not yet implemented")
+    
+    def action_toggle_preview(self) -> None:
+        """Action: Toggle preview pane visibility"""
+        note_pane = self.query_one("#note-pane")
+        note_pane.display = not note_pane.display
+        status = "shown" if note_pane.display else "hidden"
+        self.update_status(f"Preview pane {status}")
+    
+    def action_refresh(self) -> None:
+        """Action: Refresh tree view"""
+        tree_view = self.query_one("#tree-pane", NotesTreeView)
+        tree_view.refresh_tree()
+        self.update_status("Tree view refreshed")
 
     def action_help(self) -> None:
         """Action: Show help dialog"""
-        self.update_status("Help not yet implemented")
+        help_text = "Notes TUI - Keybindings:\n\n"
+        help_text += f"  {self.config.get_keybinding('new_note')} - Create new note\n"
+        help_text += f"  {self.config.get_keybinding('edit_note')} - Edit selected note\n"
+        help_text += f"  {self.config.get_keybinding('delete_note')} - Delete selected note\n"
+        help_text += f"  {self.config.get_keybinding('search')} - Search notes\n"
+        help_text += f"  {self.config.get_keybinding('toggle_preview')} - Toggle preview pane\n"
+        help_text += f"  {self.config.get_keybinding('refresh')} - Refresh tree view\n"
+        help_text += f"  {self.config.get_keybinding('quit')} - Quit application\n"
+        self.update_status(help_text.replace('\n', ' | '))
 
 
 if __name__ == "__main__":
