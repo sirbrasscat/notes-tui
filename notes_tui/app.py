@@ -121,7 +121,23 @@ class NotesApp(App):
 
     def on_mount(self) -> None:
         """Handle mounting of the app"""
-        self.update_status("Ready")
+        self.update_status("Ready - Press 'n' for new note, '?' for help")
+    
+    def on_notes_tree_view_note_selected(self, event: NotesTreeView.NoteSelected) -> None:
+        """Handle note selection from tree view
+        
+        Args:
+            event: Note selection event
+        """
+        self.current_note = event.note_path
+        
+        # Load note in preview pane
+        note_preview = self.query_one("#note-pane", NotePreview)
+        note_preview.load_note(event.note_path)
+        
+        # Update status
+        rel_path = event.note_path.relative_to(self.notes_dir)
+        self.update_status(f"Viewing: {rel_path}")
 
     def update_status(self, message: str) -> None:
         """Update the status bar message"""
