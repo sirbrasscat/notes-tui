@@ -13,6 +13,7 @@ editor:
   default: "nano"
   # Alternative editors in order of preference if default is not available
   alternatives:
+    - "nvim"
     - "vim"
     - "vi"
   # Additional arguments to pass to the editor
