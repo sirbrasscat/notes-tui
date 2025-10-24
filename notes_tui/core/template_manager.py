@@ -11,19 +11,26 @@ import re
 class TemplateManager:
     """Manages note templates and creation from templates"""
     
-    def __init__(self, templates_dir: Optional[Path] = None):
+    def __init__(self, config=None, templates_dir: Optional[Path] = None):
         """Initialize the template manager
         
         Args:
-            templates_dir: Directory containing template files
+            config: Config object containing templates directory path
+            templates_dir: Optional override for templates directory path
         """
-        if templates_dir is None:
-            # Default to templates directory in project root
-            self.templates_dir = Path(__file__).parent.parent.parent / "templates"
-        else:
+        if templates_dir is not None:
+            # Explicit override provided
             self.templates_dir = Path(templates_dir)
+        elif config is not None:
+            # Use config's templates directory
+            self.templates_dir = config.templates_directory
+        else:
+            # Fall back to default location (for backwards compatibility)
+            self.templates_dir = Path(__file__).parent.parent.parent / "templates"
         
-        self.templates_dir.mkdir(exist_ok=True)
+        # Validate that templates directory exists
+        if not self.templates_dir.exists():
+            raise ValueError(f"Templates directory does not exist: {self.templates_dir}")
     
     def list_templates(self) -> List[Dict[str, str]]:
         """Get list of available templates
