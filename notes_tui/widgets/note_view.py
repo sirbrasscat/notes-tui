@@ -2,6 +2,8 @@
 Note preview widget for displaying note content
 """
 
+from pathlib import Path
+from typing import Optional
 from textual.widgets import Static
 from textual.containers import ScrollableContainer
 from rich.markdown import Markdown
@@ -11,6 +13,9 @@ from rich.text import Text
 class NotePreview(Static):
     """Widget for previewing markdown notes"""
     
+    # Make this widget focusable so Tab key can focus it
+    can_focus = True
+    
     def __init__(self, **kwargs):
         """Initialize the note preview widget
         
@@ -18,7 +23,8 @@ class NotePreview(Static):
             **kwargs: Additional widget arguments
         """
         super().__init__(**kwargs)
-        self.current_note = None
+        self.current_note_content: Optional[str] = None
+        self.current_note_path: Optional[Path] = None
     
     def render(self) -> Text | Markdown:
         """Render the note content
@@ -26,10 +32,15 @@ class NotePreview(Static):
         Returns:
             Rendered markdown or text content
         """
-        if self.current_note is None:
-            return Text("Select a note to view its content", style="dim")
+        if self.current_note_content is None:
+            return Text(
+                "← Select a note from the tree to view its content\n\n"
+                "Press Tab to switch between panels",
+                style="dim italic",
+                justify="center"
+            )
         
-        return Markdown(self.current_note)
+        return Markdown(self.current_note_content, code_theme="monokai")
     
     def set_note(self, content: str) -> None:
         """Set the note content to display
@@ -37,5 +48,24 @@ class NotePreview(Static):
         Args:
             content: Markdown content to display
         """
-        self.current_note = content
+        self.current_note_content = content
+        self.refresh()
+    
+    def load_note(self, note_path: Path) -> None:
+        """Load and display a note from file
+        
+        Args:
+            note_path: Path to the note file
+        """
+        try:
+            self.current_note_path = note_path
+            content = note_path.read_text(encoding='utf-8')
+            self.set_note(content)
+        except Exception as e:
+            self.set_note(f"# Error Loading Note\n\nCould not load: {note_path}\n\nError: {e}")
+    
+    def clear(self) -> None:
+        """Clear the preview"""
+        self.current_note_content = None
+        self.current_note_path = None
         self.refresh()

@@ -137,3 +137,8 @@ Thumbs.db
 notes/
 .config/
 attachments/
+
+# Virtual environment
+venv/
+*.pyc
+__pycache__/
