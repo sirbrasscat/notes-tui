@@ -52,7 +52,10 @@ class NotesApp(App):
     """
 
     # Note: BINDINGS will be set dynamically from config in __init__
-    BINDINGS = []
+    BINDINGS = [
+        Binding("tab", "focus_next", "Next Panel", show=True),
+        Binding("shift+tab", "focus_previous", "Prev Panel", show=False),
+    ]
 
     def __init__(self, config_path: Optional[Path] = None):
         """Initialize the Notes TUI application
@@ -122,6 +125,9 @@ class NotesApp(App):
     def on_mount(self) -> None:
         """Handle mounting of the app"""
         self.update_status("Ready - Press 'n' for new note, '?' for help")
+        # Set focus to tree view for immediate navigation
+        tree_view = self.query_one("#tree-pane", NotesTreeView)
+        tree_view.focus()
     
     def on_notes_tree_view_note_selected(self, event: NotesTreeView.NoteSelected) -> None:
         """Handle note selection from tree view

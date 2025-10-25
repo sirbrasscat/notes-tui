@@ -13,6 +13,9 @@ from rich.text import Text
 class NotePreview(Static):
     """Widget for previewing markdown notes"""
     
+    # Make this widget focusable so Tab key can focus it
+    can_focus = True
+    
     def __init__(self, **kwargs):
         """Initialize the note preview widget
         
@@ -30,7 +33,12 @@ class NotePreview(Static):
             Rendered markdown or text content
         """
         if self.current_note_content is None:
-            return Text("Select a note to view its content", style="dim italic")
+            return Text(
+                "← Select a note from the tree to view its content\n\n"
+                "Press Tab to switch between panels",
+                style="dim italic",
+                justify="center"
+            )
         
         return Markdown(self.current_note_content, code_theme="monokai")
     

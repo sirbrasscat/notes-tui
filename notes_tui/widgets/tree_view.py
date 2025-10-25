@@ -13,6 +13,9 @@ from notes_tui.core.notes_manager import NotesManager
 class NotesTreeView(Tree):
     """File tree browser widget for notes"""
     
+    # Tree widgets are focusable by default, but make it explicit
+    can_focus = True
+    
     class NoteSelected(Message):
         """Message emitted when a note is selected"""
         
