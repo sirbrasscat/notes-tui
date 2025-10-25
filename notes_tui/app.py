@@ -103,6 +103,12 @@ class NotesApp(App):
             ('help', 'help', 'Help'),
         ]
         
+        # Add quick capture bindings (hardcoded for speed)
+        self.BINDINGS.extend([
+            Binding("j", "quick_journal", "Journal", show=True),
+            Binding("shift+n", "template_note", "Template", show=True),
+        ])
+        
         for config_key, action, description in bindings_map:
             key = self.config.get_keybinding(config_key)
             if key:
@@ -151,7 +157,66 @@ class NotesApp(App):
         status_bar.update_message(message)
 
     def action_new_note(self) -> None:
-        """Action: Create a new note"""
+        """Action: Quick capture - create note with default template"""
+        self.update_status("Quick note - enter name...")
+        
+        # Show input dialog for note name
+        self.push_screen(
+            InputDialog(
+                title="Quick Note",
+                prompt="Enter note name:",
+                placeholder="my-quick-note"
+            ),
+            self._create_quick_note
+        )
+    
+    def _create_quick_note(self, note_name: Optional[str]) -> None:
+        """Create a quick note with default template
+        
+        Args:
+            note_name: Name for the new note
+        """
+        if note_name is None:
+            self.update_status("Note creation cancelled")
+            return
+        
+        # Ensure .md extension
+        if not note_name.endswith(".md"):
+            note_name = f"{note_name}.md"
+        
+        # Get default category and template from config
+        default_category = self.config.get('quick_capture.default_category', 'personal')
+        default_template = self.config.get('quick_capture.default_template', 'general_note.md')
+        
+        # Create note path in the appropriate category
+        category_dir = self.notes_dir / default_category
+        category_dir.mkdir(parents=True, exist_ok=True)
+        note_path = category_dir / note_name
+        
+        # Check if file already exists
+        if note_path.exists():
+            self.update_status(f"Note '{note_name}' already exists! Opening in editor...")
+            # If it exists, just open it
+            self._open_in_editor(note_path)
+            return
+        
+        # Create the note from default template
+        success = self.template_manager.create_note_from_template(
+            template_name=default_template,
+            output_path=note_path
+        )
+        
+        if success:
+            self.update_status(f"Created: {note_name}")
+            self._open_in_editor(note_path)
+        else:
+            self.update_status(f"Failed to create note - opening blank file...")
+            # If template fails, just create empty file and open
+            note_path.touch()
+            self._open_in_editor(note_path)
+    
+    def action_template_note(self) -> None:
+        """Action: Create note with template selection (original behavior)"""
         self.update_status("Select a template...")
         
         # Get available templates
@@ -214,7 +279,8 @@ class NotesApp(App):
         
         # Check if file already exists
         if note_path.exists():
-            self.update_status(f"Note '{note_name}' already exists!")
+            self.update_status(f"Note '{note_name}' already exists! Opening...")
+            self._open_in_editor(note_path)
             return
         
         # Create the note from template
@@ -224,33 +290,78 @@ class NotesApp(App):
         )
         
         if success:
-            self.update_status(f"Created note: {note_name}")
-            
-            # Refresh the tree view
-            tree_view = self.query_one("#tree-pane", NotesTreeView)
-            tree_view.refresh_tree()
-            
-            # Set as current note
-            self.current_note = note_path
-            
-            # If instant_edit is enabled, open in editor immediately
-            if self.config.get('quick_capture.instant_edit', True):
-                try:
-                    with self.suspend():
-                        self.editor_manager.launch(note_path)
-                    
-                    # Refresh preview after editing
-                    note_preview = self.query_one("#note-pane", NotePreview)
-                    note_preview.load_note(note_path)
-                    self.update_status(f"Note saved: {note_name}")
-                except Exception as e:
-                    self.update_status(f"Error opening editor: {e}")
+            self.update_status(f"Created: {note_name}")
+            self._open_in_editor(note_path)
         else:
             self.update_status(f"Failed to create note from template '{template_name}'")
 
     def action_delete_note(self) -> None:
         """Action: Delete the current note"""
         self.update_status("Delete feature not yet implemented")
+    
+    def _open_in_editor(self, note_path: Path) -> None:
+        """Open a note in external editor and refresh UI
+        
+        Args:
+            note_path: Path to note file
+        """
+        try:
+            # Suspend TUI to launch editor
+            with self.suspend():
+                self.update_status(f"Opening {note_path.name} in editor...")
+                success = self.editor_manager.launch(note_path)
+            
+            if success:
+                # Refresh the tree view
+                tree_view = self.query_one("#tree-pane", NotesTreeView)
+                tree_view.refresh_tree()
+                
+                # Set as current note
+                self.current_note = note_path
+                
+                # Refresh preview
+                note_preview = self.query_one("#note-pane", NotePreview)
+                note_preview.load_note(note_path)
+                
+                self.update_status(f"Saved: {note_path.name}")
+            else:
+                self.update_status("Editor exited with error")
+                
+        except Exception as e:
+            self.update_status(f"Error launching editor: {e}")
+    
+    def action_quick_journal(self) -> None:
+        """Action: Open today's journal instantly"""
+        from datetime import datetime
+        
+        # Get today's date
+        today = datetime.now().strftime("%Y-%m-%d")
+        journal_name = f"{today}.md"
+        
+        # Journal goes in journals/ category
+        journal_dir = self.notes_dir / "journals"
+        journal_dir.mkdir(parents=True, exist_ok=True)
+        journal_path = journal_dir / journal_name
+        
+        # If journal doesn't exist, create from template
+        if not journal_path.exists():
+            # Try to use daily_journal template
+            template_name = "daily_journal.md"
+            success = self.template_manager.create_note_from_template(
+                template_name=template_name,
+                output_path=journal_path
+            )
+            
+            if not success:
+                # If template doesn't exist, create basic journal entry
+                journal_path.write_text(f"# Journal - {today}\n\n")
+            
+            self.update_status(f"Created journal: {today}")
+        else:
+            self.update_status(f"Opening journal: {today}")
+        
+        # Open in editor
+        self._open_in_editor(journal_path)
 
     def action_edit_note(self) -> None:
         """Action: Edit the current note in external editor"""
@@ -299,12 +410,15 @@ class NotesApp(App):
     def action_help(self) -> None:
         """Action: Show help dialog"""
         help_text = "Notes TUI - Keybindings:\n\n"
-        help_text += f"  {self.config.get_keybinding('new_note')} - Create new note\n"
+        help_text += "  n - Quick note (default template)\n"
+        help_text += "  N - New note (choose template)\n"
+        help_text += "  j - Today's journal\n"
         help_text += f"  {self.config.get_keybinding('edit_note')} - Edit selected note\n"
         help_text += f"  {self.config.get_keybinding('delete_note')} - Delete selected note\n"
         help_text += f"  {self.config.get_keybinding('search')} - Search notes\n"
         help_text += f"  {self.config.get_keybinding('toggle_preview')} - Toggle preview pane\n"
         help_text += f"  {self.config.get_keybinding('refresh')} - Refresh tree view\n"
+        help_text += "  Tab - Switch panels\n"
         help_text += f"  {self.config.get_keybinding('quit')} - Quit application\n"
         self.update_status(help_text.replace('\n', ' | '))
 
