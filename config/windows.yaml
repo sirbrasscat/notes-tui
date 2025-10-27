@@ -27,9 +27,9 @@ ui:
   # Show preview pane by default
   show_preview: true
   # Tree view width (percentage of screen)
-  tree_width: 70
+  tree_width: 50
   # Preview pane width (percentage of remaining space)
-  preview_width: 70
+  preview_width: 50
   
 
 # Display settings

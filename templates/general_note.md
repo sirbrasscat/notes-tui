@@ -82,4 +82,3 @@ status: "{{ status|default('draft') }}"
 
 **Ideas:**
 - 
--
