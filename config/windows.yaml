@@ -1,0 +1,67 @@
+# Notes TUI Configuration for Windows
+# This file contains all configuration for the TUI application
+
+# Path to your main notes directory (where your markdown files live)
+notes_directory: "."
+
+# Path to templates directory
+templates_directory: "./templates"
+
+# Editor settings
+editor:
+  # Default editor to use (notepad, code, vim, etc.)
+  default: "notepad"
+  # Alternative editors in order of preference if default is not available
+  alternatives:
+    - "code"
+    - "notepad++"
+    - "vim"
+    - "vi"
+  # Additional arguments to pass to the editor
+  args: []
+
+# UI layout settings
+ui:
+  # Show tree view on startup
+  show_tree: true
+  # Show preview pane by default
+  show_preview: true
+  # Tree view width (percentage of screen)
+  tree_width: 70
+  # Preview pane width (percentage of remaining space)
+  preview_width: 70
+  
+
+# Display settings
+display:
+  # Show file extensions in tree view
+  show_extensions: true
+  # Show hidden files (starting with .)
+  show_hidden: false
+  # Maximum number of files to display in tree
+  max_files: 1000
+
+# Search settings
+search:
+  # Enable full-text search
+  enabled: true
+  # Include file contents in search
+  search_content: true
+  # Search case sensitive
+  case_sensitive: false
+  # Maximum search results
+  max_results: 100
+
+# Keybinding preferences
+keybindings:
+  # Navigation style (vim/emacs/default)
+  style: "default"
+  # Custom key bindings (optional)
+  custom: {}
+
+# Template settings
+templates:
+  # Auto-fill template variables
+  auto_fill: true
+  # Default template for new notes
+  default_template: "general_note"
