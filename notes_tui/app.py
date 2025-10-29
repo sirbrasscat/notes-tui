@@ -325,23 +325,33 @@ class NotesApp(App):
         today = datetime.now().strftime("%Y-%m-%d")
         journal_name = f"{today}.md"
         
-        # Journal goes in journals/ category
-        journal_dir = self.notes_dir / "journals"
+        # Journal goes in journals/daily/ to match existing structure
+        journal_dir = self.notes_dir / "journals" / "daily"
         journal_dir.mkdir(parents=True, exist_ok=True)
         journal_path = journal_dir / journal_name
         
         # If journal doesn't exist, create from template
         if not journal_path.exists():
-            # Try to use daily_journal template
-            template_name = "daily_journal.md"
+            # Try to use daily_journal template with proper variables
+            template_name = "daily_journal"  # Don't include .md extension
+            
+            # Provide variables for template
+            variables = {
+                'title': f'Daily Journal - {today}',
+                'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'tags': "['daily', 'journal']",
+                'status': 'active'
+            }
+            
             success = self.template_manager.create_note_from_template(
                 template_name=template_name,
-                output_path=journal_path
+                output_path=journal_path,
+                variables=variables
             )
             
             if not success:
-                # If template doesn't exist, create basic journal entry
-                journal_path.write_text(f"# Journal - {today}\n\n")
+                # If template doesn't exist or fails, create basic journal entry
+                journal_path.write_text(f"# Daily Journal - {today}\n\n")
             
             self.update_status(f"Created journal: {today}")
         else:
