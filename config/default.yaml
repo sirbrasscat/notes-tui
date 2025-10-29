@@ -10,12 +10,12 @@ templates_directory: "/home/brassy/Docker/notes/.templates"
 # Editor settings
 editor:
   # Default editor to use (nano, vim, nvim, etc.)
-  default: "nano"
+  default: "nvim"
   # Alternative editors in order of preference if default is not available
   alternatives:
-    - "nvim"
     - "vim"
     - "vi"
+    - "nano"
   # Additional arguments to pass to the editor
   args: []
 

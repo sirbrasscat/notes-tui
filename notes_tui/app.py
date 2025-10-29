@@ -86,8 +86,10 @@ class NotesApp(App):
     
     def _setup_keybindings(self) -> None:
         """Setup keybindings from config"""
-        # Always include quit bindings
+        # Start with Tab navigation (keep the initial bindings)
         self.BINDINGS = [
+            Binding("tab", "focus_next", "Next Panel", show=True),
+            Binding("shift+tab", "focus_previous", "Prev Panel", show=False),
             Binding(self.config.get_keybinding('quit') or "q", "quit", "Quit", show=True),
             Binding("ctrl+c", "quit", "Quit"),
         ]
