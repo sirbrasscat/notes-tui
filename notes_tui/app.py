@@ -51,10 +51,30 @@ class NotesApp(App):
     }
     """
 
-    # Note: BINDINGS will be set dynamically from config in __init__
+    # Keybindings - defined at class level for Textual to pick them up
     BINDINGS = [
+        # Navigation
         Binding("tab", "focus_next", "Next Panel", show=True),
         Binding("shift+tab", "focus_previous", "Prev Panel", show=False),
+        
+        # Quick Capture
+        Binding("n", "new_note", "New", show=True),
+        Binding("shift+n", "template_note", "Template", show=True),
+        Binding("j", "quick_journal", "Journal", show=True),
+        
+        # File Operations
+        Binding("e", "edit_note", "Edit", show=True),
+        Binding("d", "delete_note", "Delete", show=True),
+        
+        # UI Controls
+        Binding("p", "toggle_preview", "Preview", show=True),
+        Binding("r", "refresh", "Refresh", show=True),
+        Binding("/", "search", "Search", show=True),
+        Binding("?", "help", "Help", show=True),
+        
+        # Quit
+        Binding("q", "quit", "Quit", show=True),
+        Binding("ctrl+c", "quit", "Quit", show=False),
     ]
 
     def __init__(self, config_path: Optional[Path] = None):
@@ -67,9 +87,6 @@ class NotesApp(App):
         
         # Load configuration
         self.config = Config(config_path)
-        
-        # Set up keybindings from config
-        self._setup_keybindings()
         
         # Initialize managers using config
         self.notes_dir = self.config.notes_directory
@@ -84,38 +101,6 @@ class NotesApp(App):
         # Current selected note
         self.current_note: Optional[Path] = None
     
-    def _setup_keybindings(self) -> None:
-        """Setup keybindings from config"""
-        # Start with Tab navigation (keep the initial bindings)
-        self.BINDINGS = [
-            Binding("tab", "focus_next", "Next Panel", show=True),
-            Binding("shift+tab", "focus_previous", "Prev Panel", show=False),
-            Binding(self.config.get_keybinding('quit') or "q", "quit", "Quit", show=True),
-            Binding("ctrl+c", "quit", "Quit"),
-        ]
-        
-        # Add other bindings from config
-        bindings_map = [
-            ('new_note', 'new_note', 'New'),
-            ('edit_note', 'edit_note', 'Edit'),
-            ('delete_note', 'delete_note', 'Delete'),
-            ('search', 'search', 'Search'),
-            ('toggle_preview', 'toggle_preview', 'Preview'),
-            ('refresh', 'refresh', 'Refresh'),
-            ('help', 'help', 'Help'),
-        ]
-        
-        # Add quick capture bindings (hardcoded for speed)
-        self.BINDINGS.extend([
-            Binding("j", "quick_journal", "Journal", show=True),
-            Binding("shift+n", "template_note", "Template", show=True),
-        ])
-        
-        for config_key, action, description in bindings_map:
-            key = self.config.get_keybinding(config_key)
-            if key:
-                self.BINDINGS.append(Binding(key, action, description, show=True))
-
     def compose(self) -> ComposeResult:
         """Create child widgets for the app"""
         yield Header()
