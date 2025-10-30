@@ -1,6 +1,6 @@
 # Notes TUI - Personal Markdown Notebook
 
-> A distraction-free, friction-free terminal user interface for rapid thought capture and note management.
+> IN VCERY EARLY ALPHA STAGE. All the documentation and code is LLM Generated. Slowly going through and validating everything.
 
 **Version:** 0.1.0 (Phase 1)  
 **Built with:** [Textual](https://textual.textualize.io/) - Modern Python TUI framework
